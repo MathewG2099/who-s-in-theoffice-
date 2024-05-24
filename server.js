@@ -569,3 +569,98 @@ function deleteRole() {
             });
     });
 }
+// Fuction to DELETE Department
+function deleteDepartment() {
+    // get the list of departments
+    const query = "SELECT * FROM departments";
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        const departmentChoices = res.map((department) => ({
+            name: department.department_name,
+            value: department.id,
+        }));
+
+        // prompt the user to select a department
+        inquirer
+            .prompt({
+                type: "list",
+                name: "departmentId",
+                message: "Which department do you want to delete?",
+                choices: [
+                    ...departmentChoices,
+                    { name: "Go Back", value: "back" },
+                ],
+            })
+            .then((answer) => {
+                if (answer.departmentId === "back") {
+                    // go back to the previous menu
+                    deleteDepartmentsRolesEmployees();
+                } else {
+                    const query = "DELETE FROM departments WHERE id = ?";
+                    connection.query(
+                        query,
+                        [answer.departmentId],
+                        (err, res) => {
+                            if (err) throw err;
+                            console.log(
+                                `Deleted department with ID ${answer.departmentId} from the database!`
+                            );
+                            // restart the application
+                            start();
+                        }
+                    );
+                }
+            });
+    });
+}
+// Function to view Total Utilized Budget of Department
+function viewTotalUtilizedBudgetOfDepartment() {
+    const query = "SELECT * FROM departments";
+    connection.query(query, (err, res) => {
+        if (err) throw err;
+        const departmentChoices = res.map((department) => ({
+            name: department.department_name,
+            value: department.id,
+        }));
+
+        // prompt the user to select a department
+        inquirer
+            .prompt({
+                type: "list",
+                name: "departmentId",
+                message:
+                    "Which department do you want to calculate the total salary for?",
+                choices: departmentChoices,
+            })
+            .then((answer) => {
+                // calculate the total salary for the selected department
+                const query =
+                    `SELECT 
+                    departments.department_name AS department,
+                    SUM(roles.salary) AS total_salary
+                  FROM 
+                    departments
+                    INNER JOIN roles ON departments.id = roles.department_id
+                    INNER JOIN employee ON roles.id = employee.role_id
+                  WHERE 
+                    departments.id = ?
+                  GROUP BY 
+                    departments.id;`;
+                connection.query(query, [answer.departmentId], (err, res) => {
+                    if (err) throw err;
+                    const totalSalary = res[0].total_salary;
+                    console.log(
+                        `The total salary for employees in this department is $${totalSalary}`
+                    );
+                    // restart the application
+                    start();
+                });
+            });
+    });
+}
+
+// close the connection when the application exits
+process.on("exit", () => {
+    connection.end();
+});
+// Thank you for viewing!
